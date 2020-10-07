@@ -1,4 +1,3 @@
-from mancala import *
 import copy
 
 class Player:
