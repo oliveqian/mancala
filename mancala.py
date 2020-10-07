@@ -1,6 +1,10 @@
 import itertools
 import random
 import copy
+from enum import Enum
+
+inf = float("inf")
+
 class Board:
 
     def __init__(self):
@@ -11,16 +15,11 @@ class Board:
 
     def display(self):
         # display all relevant info
-        disp = str(self.p1store)
-        disp += ' - | '
-        for i in self.p1_pit:
-            disp += str(i) + '||  '
-        disp += '\n'
-        disp += '---------------------------------------------' + '\n' + '     '
-        for i in self.p2_pit:
-            disp += str(i) + '||  '
-        disp += '| - ' + str(self.p2store)
+        disp = "%2d -" % self.p1store + "||".join(["%2d"%num for num in self.p1_pit]) + "\n"
+        disp += '---------------------------------------------' + '\n'
+        disp += '    ' + "||".join(["%2d"%num for num in self.p2_pit]) + " -%2d" % self.p2store
         return disp
+
 
     def check_legal_moves(self, player, move):
         # check if the move is legal or not
@@ -53,6 +52,7 @@ class Board:
             return False
         else:
             if player.num == 2:
+                pos = 1
                 pit = self.p2_pit
                 oppo_pit = self.p1_pit[::-1]
                 # check 0
@@ -87,6 +87,7 @@ class Board:
                 return play_again
 
             else:
+                pos = 1
                 pit = self.p1_pit
                 pit = pit[::-1]
                 oppo_pit = self.p2_pit
@@ -96,7 +97,7 @@ class Board:
                 temp_list = []
                 temp_list += pit + [self.p1store] + oppo_pit
                 temp_list[6 - move] = 0
-                for i in range(1,pit[6-move]+1):
+                for i in range(1, pit[6-move]+1):
                     pos = int((6-move+i)%(len(temp_list)))
                     temp_list[pos] += 1
                     # capture
@@ -197,37 +198,41 @@ class Board:
             else:
                 return 0
 
-
-class Player:
+class PlayerType(Enum):
     Human = 0
     Random = 1
     Minimax = 2
     Minimax_ab = 3
 
-    def __init__(self, player_num, player_type):
+class Player:
+    __slots__ = ("num", "type", "opponent","level")
+
+    def __init__(self, player_num: int, player_type: PlayerType, level: int):
         self.num = player_num
         self.type = player_type
-        self.opponent = 2 - player_num + 1
-        self.inf = float('inf')
+        self.opponent = 3 - player_num
+        self.level = level
+
 
     def make_move(self, board):
-        if self.type == self.Human:
+        if self.type == PlayerType.Human:
             move = int(input("Enter your move(1-6):"))
+            assert move > 0 and move < 7
             while not board.check_legal_moves(self, move):
                 print("Move is not valid")
                 move = int(input("Enter your move(1-6):"))
             return move
 
-        if self.type == self.Random:
+        if self.type == PlayerType.Random:
             print(board.move_list(self))
             move = random.choice(board.move_list(self))
             return int(move + 1)
 
-        if self.type == self.Minimax:
-            move = self.minmax_move(board)
-            return move
+        if self.type == PlayerType.Minimax:
+            move = self.minmax_move(board, self.level)
+            return int(move+1)
 
-        if self.type == self.Minimax_ab:
+        if self.type == PlayerType.Minimax_ab:
             return
 
     def evaluate(self, board):
@@ -238,64 +243,58 @@ class Player:
 
 
 
-    def maxvalue(self, board, turn, level):
+    def maxvalue(self, board, turn, level = 0):
         if board.end_of_game():
             return turn.score_eval(board)
 
-        score = -self.inf
+        score = -inf
         for elem in board.move_list(self):
-            opponent = Player(self.opponent, self.type)
+            if level == 0:
+                return turn.score_eval(board)
+            opponent = Player(self.opponent, self.type, self.level)
             next_board = copy.deepcopy(board)
             next_board.jump(self, elem)
-            value = opponent.minvalue(next_board, turn)
+            value = opponent.minvalue(next_board, turn, level - 1)
             if value > score:
                 score = value
         return score
 
-
-
-    def minvalue(self, board, turn, level):
-        score = self.inf
+    def minvalue(self, board, turn, level = 0):
+        score = inf
         # terminal state
         if board.end_of_game():
             return turn.score_eval(board)
-
+        if level == 0:
+            return (self.score_eval(board))
         for elem in board.move_list(self):
-            opponent = Player(self.opponent, self.type)
+            opponent = Player(self.opponent, self.type, self.level)
             next_board = copy.deepcopy(board)
-            next_board.jump(self, elem)
-            value = opponent.maxvalue(next_board, turn)
+            next_board.jump(self, elem+1)
+            value = opponent.maxvalue(next_board, turn, level - 1)
             if value < score:
                 score = value
         return score
 
     def score_eval(self, board):
-        if self.num == 1:
-            if sum(board.p1_pit) + board.p1store > 24:
-                return 1
-            elif sum(board.p1_pit) + board.p1store == 24:
-                return 0
-            else:
-                return -1
-        else:
-            if sum(board.p2_pit) + board.p2store > 24:
-                return 1
-            elif sum(board.p1_pit) + board.p2store == 24:
-                return 0
-            else:
-                return -1
 
-    def minmax_move(self, board):
+        if self.num == 1:
+            return (sum(board.p1_pit) + board.p1store) - (sum(board.p2_pit) + board.p2store)
+        else:
+            return (sum(board.p2_pit) + board.p1store) - (sum(board.p1_pit) + board.p1store)
+
+    def minmax_move(self, board, level):
         move = -1
         turn = self
-        score = -self.inf
+        score = -inf
+        if board.end_of_game():
+            return -1
         for elem in board.move_list(self):
-            if board.end_of_game():
-                return -1
+            if level == 0:
+                return self.score_eval(board)
             new_board = copy.deepcopy(board)
             new_board.jump(self, elem)
-            opponent = Player(self.opponent, self.type)
-            value = opponent.minvalue(new_board, turn)
+            opponent = Player(self.opponent, self.type, self.level)
+            value = opponent.minvalue(new_board, turn, level - 1)
             if value > score:
                 score = value
                 move = elem
@@ -311,7 +310,7 @@ class Player:
         return
 
 board = Board()
-yq = Player(1, 0)
-yz = Player(2, 1)
+yq = Player(1, PlayerType.Human,0)
+yz = Player(2, PlayerType.Minimax,5)
 board.host_game(yq, yz)
 

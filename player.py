@@ -1,4 +1,6 @@
 import copy
+import random
+
 
 class Player:
     Human = 0
@@ -53,7 +55,6 @@ class Player:
             if value > score:
                 score = value
         return score
-
 
 
     def minvalue(self, board, turn, level):
