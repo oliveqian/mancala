@@ -251,7 +251,7 @@ class Player:
         for elem in board.move_list(self):
             if level == 0:
                 return turn.score_eval(board)
-            opponent = Player(self.opponent, self.type, self.level)
+            opponent = Player(self.opponent, self.type, self.level - 1)
             next_board = copy.deepcopy(board)
             next_board.jump(self, elem)
             value = opponent.minvalue(next_board, turn, level - 1)
@@ -267,7 +267,7 @@ class Player:
         if level == 0:
             return (self.score_eval(board))
         for elem in board.move_list(self):
-            opponent = Player(self.opponent, self.type, self.level)
+            opponent = Player(self.opponent, self.type, self.level - 1)
             next_board = copy.deepcopy(board)
             next_board.jump(self, elem+1)
             value = opponent.maxvalue(next_board, turn, level - 1)
@@ -301,6 +301,7 @@ class Player:
         return move
 
     def minvalue_ab(self):
+
         return
 
     def maxvalue_ab(self):
