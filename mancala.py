@@ -1,7 +1,8 @@
 import itertools
 import random
-
+import copy
 class Board:
+
     def __init__(self):
         self.p1_pit = [4,4,4,4,4,4]
         self.p2_pit = [4,4,4,4,4,4]
@@ -310,7 +311,7 @@ class Player:
         return
 
 board = Board()
-yq = Player(1,0)
-yz = Player(2,1)
-board.host_game(yq,yz)
+yq = Player(1, 0)
+yz = Player(2, 1)
+board.host_game(yq, yz)
 
